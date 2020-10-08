@@ -1,13 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
+// import './index.css';
 // import './css/normalize.css';
 import App from './App';
+import SpeachToText from './SpeachToText'
 import * as serviceWorker from './serviceWorker';
 
 ReactDOM.render(
   <React.StrictMode>
     <App />
+    <SpeachToText />
   </React.StrictMode>,
   document.getElementById('root')
 );

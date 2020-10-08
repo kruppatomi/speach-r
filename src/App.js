@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+ import React, { Component } from 'react';
 import $ from 'jquery'
 // import {JsSpeechRecognizer} from './JsSpeechRecognizer';
 
@@ -710,26 +710,110 @@ JsSpeechRecognizer.prototype.calculateNoise = function(input, modelEntry) {
 };
 //-------------------------------------------JsSpeechRecognizer-----------------------------------------------------------------
 //-----------------------------------------------jQuery-------------------------------------------------------------------
-  var speechRec = new JsSpeechRecognizer();
-  speechRec.openMic();
+//   var speechRec = new JsSpeechRecognizer();
+//   speechRec.openMic();
 
-  $(document).ready(function() {
+//   $(document).ready(function() {
+//     // Add the handler for the button
+//     $("#startStopRecordingButton").click(function() {
+//         if (!speechRec.isRecording()) {
+//             var word = $("#currentWordText").val();
+//             speechRec.startTrainingRecording(word);
+
+//             // Update the UI
+//             $("#startStopRecordingButton").val("stop training");
+//             document.getElementById("testingStartStopRecordingButton").disabled = true;
+
+//         } else {
+//             var recordingId = speechRec.stopRecording();
+
+//             // Update the UI
+//             $("#startStopRecordingButton").val("start training");
+//             document.getElementById("testingStartStopRecordingButton").disabled = false;
+
+//             // Append to the results area
+//             var playbackDivId = "playbackResultId" + recordingId;
+//             var playButtonId = "playRecordingButton" + recordingId;
+//             var deleteButtonId = "deleteRecordingButton" + recordingId;
+
+//             var appendHtml = '<div id=' + playbackDivId + '>recording #' + recordingId;
+//             appendHtml += ' for word <b>' + $("#currentWordText").val() + '</b>';
+//             appendHtml += '<input type="button" class="playDeleteButton" value="play" id="' + playButtonId + '"" />';
+//             appendHtml += '<input type="button" class="playDeleteButton" value="delete" id="' + deleteButtonId + '" />';
+//             appendHtml += '</div>';
+
+//             $("#resultsDiv").append(appendHtml);
+
+//             // Add the play click functionality
+//             var finalPlaybackId = recordingId - 1;
+//             $("#" + playButtonId).click(function() {
+//                 speechRec.playTrainingBuffer((finalPlaybackId));
+//             });
+
+//             // Add the delete click functionality
+//             $("#" + deleteButtonId).click(function() {
+//                 $("#" + playbackDivId).hide();
+//                 speechRec.deleteTrainingBuffer(finalPlaybackId);
+//                 speechRec.generateModel();
+//             });
+
+//             // regenerate the model
+//             speechRec.generateModel();
+
+//         }
+//     });
+
+//     $("#testingStartStopRecordingButton").click(function() {
+  
+//         if (!speechRec.isRecording()) {
+//             $("#testingStartStopRecordingButton").val("stop testing");
+//             document.getElementById("startStopRecordingButton").disabled = true;
+
+//             speechRec.startRecognitionRecording();
+//         } else {
+//             $("#testingStartStopRecordingButton").val("start testing");
+//             document.getElementById("startStopRecordingButton").disabled = false;
+
+//             speechRec.stopRecording();
+//             var result = speechRec.getTopRecognitionHypotheses(1);
+
+//             $("#testingResultsDiv").html("<h3 id='result'>" + result[0].match + " </h3> <br> <p> confidence: " + result[0].confidence + "</p>");
+//         }
+//     });
+
+// });
+// }
+
+//----------------------------KKKKKKEEEEEYYYYYYWWWOOORRRDDDSSSPPPOOOTTTIIINNNGGGG-------------------------------------
+// var notificationSound = new Audio("../resources/sounds/notification1.wav");
+
+var speechRec = new JsSpeechRecognizer();
+
+// Adjust the recognizer parameters
+speechRec.numGroups = 60;
+speechRec.groupSize = 5;
+
+speechRec.openMic();
+
+$(document).ready(function() {
     // Add the handler for the button
     $("#startStopRecordingButton").click(function() {
         if (!speechRec.isRecording()) {
             var word = $("#currentWordText").val();
             speechRec.startTrainingRecording(word);
 
-            // Update the UI
+            // Update the UI, and prevent the testing button from being pressed
             $("#startStopRecordingButton").val("stop training");
             document.getElementById("testingStartStopRecordingButton").disabled = true;
-
+            
+            
         } else {
             var recordingId = speechRec.stopRecording();
 
-            // Update the UI
+            // Update the UI and re-enable testing button
             $("#startStopRecordingButton").val("start training");
             document.getElementById("testingStartStopRecordingButton").disabled = false;
+            
 
             // Append to the results area
             var playbackDivId = "playbackResultId" + recordingId;
@@ -765,27 +849,58 @@ JsSpeechRecognizer.prototype.calculateNoise = function(input, modelEntry) {
 
     $("#testingStartStopRecordingButton").click(function() {
         if (!speechRec.isRecording()) {
+            // Update the UI and prevent the training button from being pressed
             $("#testingStartStopRecordingButton").val("stop testing");
             document.getElementById("startStopRecordingButton").disabled = true;
-
-            speechRec.startRecognitionRecording();
+            
+            speechRec.startKeywordSpottingRecording();
         } else {
             $("#testingStartStopRecordingButton").val("start testing");
             document.getElementById("startStopRecordingButton").disabled = false;
-
+            
             speechRec.stopRecording();
-            var result = speechRec.getTopRecognitionHypotheses(1);
-
-            // Format and display results
-            for (var i = 0; i < result.length; i++) {
-                result[i].confidence = result[i].confidence.toFixed(3);
-            }
-
-            $("#testingResultsDiv").html("<h3>\"" + result[0].match + "\" - confidence: " + result[0].confidence + " </h3>");
         }
     });
 
+    // Update the confidence threshold
+    $("#confidenceThreshold").val(speechRec.keywordSpottingMinConfidence);
+    $("#confidenceThresholdOutput").val(speechRec.keywordSpottingMinConfidence);
+
+    $("#confidenceThreshold").on('change', function() {
+        $("#confidenceThresholdOutput").val($("#confidenceThreshold").val());
+        speechRec.keywordSpottingMinConfidence = $("#confidenceThreshold").val();
+    });
+
 });
+
+var updateKeywordSpotting = function(result) {
+
+    // if ($("#playNotificationCheckbox").prop('checked')) {
+    //     // play the notification sound
+    //     notificationSound.pause();
+    //     notificationSound.currentTime = 0;
+    //     notificationSound.play();
+    // }
+
+    var timeId = new Date().getTime();
+    var playbackDivId = "playbackKeywordSpotId" + timeId;
+    var playButtonId = "playKeywordSpotRecordingButton" + timeId;
+
+    var appendHtml = '<div id=' + playbackDivId + '>';
+    appendHtml += '<b>' + result.match + '</b> ';
+    appendHtml += '<input type="button" value="play" id="' + playButtonId + '" />';
+    appendHtml += '</div>';
+
+    $("#testingResultsDiv").append(appendHtml + "<p> confidence: " + result.confidence + "</p>");
+
+    $("#" + playButtonId).click(function() {
+        speechRec.playMonoAudio(result.audioBuffer);
+    });
+
+};
+
+// Set the keyword spotting callback
+speechRec.keywordSpottedCallback = updateKeywordSpotting;
 }
 //-----------------------------------------------jQuery-------------------------------------------------------------------
 
@@ -811,7 +926,9 @@ render() {
       <div className="one-half column">
           <h2>Testing</h2>
           <div>
-              <input className="button-primary" id="testingStartStopRecordingButton" type="button" value="start testing" />
+                <input defaultValue=".55" type="range" min="0" max="1" step=".05" id="confidenceThreshold" />
+                <output htmlFor="confidenceThreshold" id="confidenceThresholdOutput">.55</output>
+                <input className="button-primary" id="testingStartStopRecordingButton" type="button" value="start testing" />
           </div>
           <div id="testingResultsDiv">
           </div>

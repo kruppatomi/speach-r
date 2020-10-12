@@ -1,5 +1,6 @@
- import React, { Component } from 'react';
-import $ from 'jquery'
+import React, { Component } from 'react';
+import $ from 'jquery';
+
 // import {JsSpeechRecognizer} from './JsSpeechRecognizer';
 
 class App extends Component {
@@ -29,51 +30,78 @@ function JsSpeechRecognizer() {
   this.recordingState = this.RecordingEnum.NOT_RECORDING;
   this.useRecognitionModel = this.RecognitionModel.COMPOSITE;
 
-  // Get an audio context
-  this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-
+  
+  
   // Generate functions for keyword spotting
   this.findDistanceForKeywordSpotting = this.generateFindDistanceForKeywordSpotting(-1);
   this.findDistanceForKeywordSpotting0 = this.generateFindDistanceForKeywordSpotting(0);
   this.findDistanceForKeywordSpotting5 = this.generateFindDistanceForKeywordSpotting(5);
   this.findDistanceForKeywordSpotting15 = this.generateFindDistanceForKeywordSpotting(15);
-
-
+  
+  
   // Adjustable parameters
-
-  // Create an analyser
-  this.analyser = this.audioCtx.createAnalyser();
-  this.analyser.minDecibels = -80;
-  this.analyser.maxDecibels = -10;
-  this.analyser.smoothingTimeConstant = 0;
-  this.analyser.fftSize = 1024;
-
-  // Create the scriptNode
-  this.scriptNode = this.audioCtx.createScriptProcessor(this.analyser.fftSize, 1, 1);
-  this.scriptNode.onaudioprocess = this.generateOnAudioProcess();
-
+  
+  
   // Parameters for the model calculation
   this.numGroups = 25;
   this.groupSize = 10;
   this.minPower = 0.01;
-
+  
   // Keyword spotting parameters
   this.keywordSpottingMinConfidence = 0.50;
   this.keywordSpottingBufferCount = 80;
   this.keywordSpottingLastVoiceActivity = 0;
   this.keywordSpottingMaxVoiceActivityGap = 300;
   this.keywordSpottedCallback = null;
-
+  
 }
 
 /**
-* Requests access to the microphone.
-* @public
+ * Close the microphone.
+* @public.
 */
-JsSpeechRecognizer.prototype.openMic = function() {
+JsSpeechRecognizer.prototype.closeMic = function() {
+    var constraints = {
+        "audio": false
+    };
+    navigator.getUserMedia(constraints, successCallback, errorCallback);
 
-  var constraints = {
+  var _this = this;
+  // Acess to the microphone was granted
+  function successCallback(stream) {
+      _this.stream = stream;
+      _this.source = _this.audioCtx.createMediaStreamSource(stream);
+
+      _this.source.connect(_this.analyser);
+      _this.analyser.connect(_this.scriptNode);
+
+      // This is needed for chrome
+      _this.scriptNode.connect(_this.audioCtx.destination);
+  }
+
+  function errorCallback(error) {
+      console.error('navigator.getUserMedia error: ', error);
+  }
+};
+/**
+ * Requests access to the microphone.
+ * @public
+ */
+JsSpeechRecognizer.prototype.openMic = function() {
+    // Get an audio context
+    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Create an analyser
+    this.analyser = this.audioCtx.createAnalyser();
+    this.analyser.minDecibels = -80;
+    this.analyser.maxDecibels = -10;
+    this.analyser.smoothingTimeConstant = 0;
+    this.analyser.fftSize = 1024;
+    
+    // Create the scriptNode
+    this.scriptNode = this.audioCtx.createScriptProcessor(this.analyser.fftSize, 1, 1);
+    this.scriptNode.onaudioprocess = this.generateOnAudioProcess();
+    
+    var constraints = {
       "audio": true
   };
 
@@ -187,22 +215,28 @@ JsSpeechRecognizer.prototype.deleteTrainingBuffer = function(index) {
 * @public
 */
 JsSpeechRecognizer.prototype.playMonoAudio = function(playBuffer) {
-
+this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   var channels = 1;
   var frameCount = playBuffer.length;
-  var myArrayBuffer = this.audioCtx.createBuffer(channels, frameCount, this.audioCtx.sampleRate);
+  if(frameCount > 0){
+    var myArrayBuffer = this.audioCtx.createBuffer(channels, frameCount, this.audioCtx.sampleRate);
 
-  for (var channel = 0; channel < channels; channel++) {
-      var nowBuffering = myArrayBuffer.getChannelData(channel);
-      for (var i = 0; i < frameCount; i++) {
-          nowBuffering[i] = playBuffer[i];
-      }
+    for (var channel = 0; channel < channels; channel++) {
+        var nowBuffering = myArrayBuffer.getChannelData(channel);
+        for (var i = 0; i < frameCount; i++) {
+            nowBuffering[i] = playBuffer[i];
+        }
+    }
+  
+    var playSource = this.audioCtx.createBufferSource();
+    playSource.buffer = myArrayBuffer;
+    playSource.connect(this.audioCtx.destination);
+    playSource.start();
+  }
+  else{
+      console.log(frameCount);
   }
 
-  var playSource = this.audioCtx.createBufferSource();
-  playSource.buffer = myArrayBuffer;
-  playSource.connect(this.audioCtx.destination);
-  playSource.start();
 };
 
 /**
@@ -400,7 +434,6 @@ JsSpeechRecognizer.prototype.generateOnAudioProcess = function() {
 JsSpeechRecognizer.prototype.keywordSpottingProcessFrame = function(groups, curFrame) {
 
   var computedLength;
-  var key;
   var allResults = [];
   var recordingLength;
   var workingGroupBuffer = [];
@@ -793,10 +826,13 @@ var speechRec = new JsSpeechRecognizer();
 speechRec.numGroups = 60;
 speechRec.groupSize = 5;
 
-speechRec.openMic();
+
 
 $(document).ready(function() {
-    // Add the handler for the button
+    // Add the handler for the butt
+    console.log("ready");
+    // speechRec.openMic();
+    // speechRec.closeMic();
     $("#startStopRecordingButton").click(function() {
         if (!speechRec.isRecording()) {
             var word = $("#currentWordText").val();
@@ -847,6 +883,11 @@ $(document).ready(function() {
         }
     });
 
+    //turn on microfon
+    $("#enableMicrofon").click(function(){
+        $("#enableMicrofon").val("microfon ON");
+        speechRec.openMic();
+    })
     $("#testingStartStopRecordingButton").click(function() {
         if (!speechRec.isRecording()) {
             // Update the UI and prevent the training button from being pressed
@@ -891,7 +932,7 @@ var updateKeywordSpotting = function(result) {
     appendHtml += '<input type="button" value="play" id="' + playButtonId + '" />';
     appendHtml += '</div>';
 
-    $("#testingResultsDiv").append(appendHtml + "<p> confidence: " + result.confidence + "</p>");
+    $("#testingResultsDiv").html(appendHtml + "<p> confidence: " + result.confidence + "</p>" + "<h3 id='result'>" + result.match + " </h3>");
 
     $("#" + playButtonId).click(function() {
         speechRec.playMonoAudio(result.audioBuffer);
@@ -912,6 +953,9 @@ componentDidMount(){
 render() {
   return <div className="container">
   <div className="row">
+  <div>
+        <input id="enableMicrofon" type="button" value="microfon OFF"/>
+          </div>
       <div className="one-half column">
           <h2>Training</h2>
           <div>
